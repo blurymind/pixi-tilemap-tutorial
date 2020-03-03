@@ -17,6 +17,7 @@ Completed demo: https://blurymind.github.io/pixi-tilemap-tutorial/
   </head>
   <body>
     <script>
+      // We create a class where to store the sliced tiles from the tileset image resource
       class TileSet {
         constructor({
           tilewidth,
@@ -41,7 +42,7 @@ Completed demo: https://blurymind.github.io/pixi-tilemap-tutorial/
           return this.texture.height;
         }
         prepareTextures(count) {
-          const size =
+          var size =
             count ||
             (this.width / this.tilewidth) * (this.height / this.tileheight);
 
@@ -50,16 +51,11 @@ Completed demo: https://blurymind.github.io/pixi-tilemap-tutorial/
             .map((_, frame) => this.prepareTexture(frame));
         }
         prepareTexture(frame) {
-          const cols = Math.floor(this.width / this.tilewidth);
-          const x = ((frame - this.offset) % cols) * this.tilewidth;
-          const y = Math.floor((frame - this.offset) / cols) * this.tileheight;
-          const rect = new PIXI.Rectangle(
-            x,
-            y,
-            this.tilewidth,
-            this.tileheight
-          );
-          const texture = new PIXI.Texture(this.texture, rect);
+          var cols = Math.floor(this.width / this.tilewidth);
+          var x = ((frame - this.offset) % cols) * this.tilewidth;
+          var y = Math.floor((frame - this.offset) / cols) * this.tileheight;
+          var rect = new PIXI.Rectangle(x, y, this.tilewidth, this.tileheight);
+          var texture = new PIXI.Texture(this.texture, rect);
 
           texture.baseTexture.scaleMode = this.scaleMode;
           texture.cacheAsBitmap = true;
@@ -75,10 +71,8 @@ Completed demo: https://blurymind.github.io/pixi-tilemap-tutorial/
         }
       }
       var TIME = 0;
-      var resolutionX = 800;
-      var resolutionY = 600;
-      var tileSizeX = 128;
-      var tileSizeY = 128;
+      var resolutionX = 1024;
+      var resolutionY = 720;
 
       var stats = new Stats();
       stats.showPanel(0);
@@ -87,16 +81,7 @@ Completed demo: https://blurymind.github.io/pixi-tilemap-tutorial/
       var app = new PIXI.Application(resolutionX, resolutionY);
       document.body.appendChild(app.view);
 
-      var groundTiles;
-      var playerTankSprite;
-      var playerOffsetX = resolutionX / 2 - 24;
-      var playerOffsetY = resolutionY / 2 - 24;
-
-      var player = {
-        x: 0,
-        y: 0
-      };
-
+      // We need to load the tileset image resource and the exported json file from tiled that stores the tilemap and tileset data
       PIXI.loader.add(["imgs/Viking3.png", "imgs/island.json"]).load(setup);
 
       function setup(loader, resources) {
@@ -105,10 +90,11 @@ Completed demo: https://blurymind.github.io/pixi-tilemap-tutorial/
         console.log(loader, resources);
         var island = resources["imgs/island.json"].data;
 
-        let tileset = island.tilesets[0];
-        const { tileheight, tilewidth, tilecount } = tileset;
+        // Here we take the first tileset in the tiled file. If you have multiple, you might need to do something different
+        var tileset = island.tilesets[0];
+        var { tileheight, tilewidth, tilecount } = tileset;
 
-        const TILESET = new TileSet({
+        var TILESET = new TileSet({
           tilewidth,
           tileheight,
           texture: PIXI.utils.TextureCache["imgs/Viking3.png"],
@@ -123,39 +109,37 @@ Completed demo: https://blurymind.github.io/pixi-tilemap-tutorial/
 
         island.layers.forEach(layer => {
           if (!layer.visible) return;
-          console.log("LAYER>>", layer);
           if (layer.type === "objectgroup") {
             layer.objects.forEach(object => {
-              const { gid, id, width, height, x, y, visible } = object;
+              var { gid, id, width, height, x, y, visible } = object;
               if (visible === false) return;
               if (TILESET.getFrame(gid)) {
                 TILEMAP.addFrame(TILESET.getFrame(gid), x, y - tileheight);
               }
             });
           } else if (layer.type === "tilelayer") {
-            let ind = 0;
+            var ind = 0;
             for (var i = 0; i < layer.height; i++) {
               for (var j = 0; j < layer.width; j++) {
-                const xPos = tilewidth * j;
-                const yPos = tileheight * i;
+                var xPos = tilewidth * j;
+                var yPos = tileheight * i;
 
-                const tileUid = layer.data[ind];
+                var tileUid = layer.data[ind];
 
                 if (tileUid !== 0) {
-                  const tileData = tileset.tiles.find(
+                  var tileData = tileset.tiles.find(
                     tile => tile.id === tileUid - 1
                   );
 
+                  // Animated tiles have a limitation with only being able to use frames arranged one to each other on the image resource
                   if (tileData && tileData.animation) {
                     TILEMAP.addFrame(
                       TILESET.getFrame(tileUid),
                       xPos,
-                      yPos,
-                      1,
-                      0,
-                      tileData.animation.length * tilewidth
-                    );
+                      yPos
+                    ).tileAnimX(tilewidth, tileData.animation.length);
                   } else {
+                    // Non animated props dont require tileAnimX or Y
                     TILEMAP.addFrame(TILESET.getFrame(tileUid), xPos, yPos);
                   }
                 }
@@ -169,17 +153,17 @@ Completed demo: https://blurymind.github.io/pixi-tilemap-tutorial/
         gameLoop();
       }
 
-      var tick = new Date().getTime();
-      var tileAnim = 0;
-      var tileAnimationTick = 0;
+      // For tracking stats
       function gameLoop() {
         stats.begin();
         stats.end();
         requestAnimationFrame(gameLoop);
       }
 
+      // We increment time by one whenever we want to progress all tile animations
       setInterval(() => {
-        TIME += 42;
+        TIME += 1;
+        // tileAnim[0] will move time on the X axis, while tileAnim[1] on the Y
         app.renderer.plugins.tilemap.tileAnim[0] = TIME;
         app.renderer.render(app.stage);
       }, 100);
