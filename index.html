@@ -147,11 +147,8 @@
                     TILEMAP.addFrame(
                       TILESET.getFrame(tileUid),
                       xPos,
-                      yPos,
-                      1,
-                      0,
-                      tileData.animation.length * tilewidth
-                    );
+                      yPos
+                    ).tileAnimX(tilewidth, tileData.animation.length);
                   } else {
                     TILEMAP.addFrame(TILESET.getFrame(tileUid), xPos, yPos);
                   }
@@ -176,7 +173,7 @@
       }
 
       setInterval(() => {
-        TIME += 42;
+        TIME += 1;
         app.renderer.plugins.tilemap.tileAnim[0] = TIME;
         app.renderer.render(app.stage);
       }, 100);
